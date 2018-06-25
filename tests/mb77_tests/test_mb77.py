@@ -1,4 +1,4 @@
-from crustequilibrium.mb77.mb77_lib import *
+from crustcomposition.mb77.mb77_lib import *
 
 def run_tests():
     print(W_N_solve(40,20))

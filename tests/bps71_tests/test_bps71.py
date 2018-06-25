@@ -1,4 +1,4 @@
-from crustequilibrium.bps71.bps71 import *
+from crustcomposition.bps71.bps71 import *
 
 
 Ps = np.logspace(22,30,num=100) # dyne cm^-2, or erg cm^-3

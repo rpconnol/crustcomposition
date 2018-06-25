@@ -24,6 +24,10 @@ threepisquared = (3.0 * np.pi**2.0)
 onethird = 1.0/3.0
 twothirds = 2.0/3.0
 
+# m_n in MeV/c^2 with the c^2 divided through, specifically for use in
+# [hbar^2 k^2 / m]  terms to cancel out the s^2 fm^-2 portion of the units
+m_n_overc2 = m_n/(c_fm**2.0) 
+
 # Fit parameters of MB77 (table 1)
 k_0 = 1.34     # fm^-1
 w_0 = 15.47    # MeV

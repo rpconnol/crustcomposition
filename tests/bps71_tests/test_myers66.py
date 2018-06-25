@@ -1,4 +1,4 @@
-from crustequilibrium.bps71.myers66 import *
+from crustcomposition.bps71.myers66 import *
 
 
 def run_tests():

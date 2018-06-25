@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from bbp71_lib import *
+from crust_composition.bbp71.bbp71_lib import *
 
 x_tab1  = [0.313,0.310,0.307,0.304,0.302,0.299,0.295,0.291,0.286,0.280,
            0.273,0.266,0.256,0.246,0.234,0.220,0.202,0.186,0.163,0.146,

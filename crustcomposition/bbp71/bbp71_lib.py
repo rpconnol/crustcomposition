@@ -2,7 +2,7 @@ import numpy as np
 import scipy.optimize as opt
 import sys
 
-from bbp71_constants import *
+from ..constants.constants_def import *
 #from bbp71_solvers import *
 
 '''

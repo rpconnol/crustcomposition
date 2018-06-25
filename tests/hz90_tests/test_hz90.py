@@ -1,4 +1,4 @@
-from crustequilibrium.hz90.hz90_lib import *
+from crustcomposition.hz90.hz90_lib import *
 
 def run_tests():
     neutron_drip = True
