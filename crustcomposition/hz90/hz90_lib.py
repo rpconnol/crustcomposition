@@ -4,26 +4,27 @@ import sys
 
 from ..constants.constants_def import *
 from ..mb77.mb77_lib import *
+from ..ame16.ame16_lib import *
 
 '''
-adfadfa
+
 '''
 
 
-# REGARDING NEUTRON DRIP REGIME:
-# Into the three equations in (5), go P, A_cell, and an (A,Z) pair.
-# With those equations one should be able to self consistently calculate
-# n_N, n_n, V_N, n_e, etc. To simplify things, let's pick the one thing
-# we're going to boil everything down into: n_n. This works as long as I
-# don't treat separately the W_L component of W_coul in the mb77 mass calc.
-# W_L needs n_N explicitly, which turns it into a two simultaneous equation
-# solve for n_n and n_N, if I want to include that contribution when solving
-# for k. But the contribution is probably small relatively to the other terms
-# in W_coul, so let's leave it separate for now, which means everything can be
-# put in terms of n_n.
 
 # Note: ALL units in MeV and fm for now. Densities are fm^-3, pressures are
 # MeV/fm^3, k's are fm^-1, etc.
+
+
+def get_mass(Z,A,n_n):
+    ame16_data = load_mass16rc('crustcomposition/ame16/mass16_rc.txt')
+    mass = mass_from_ZA(Z,A,ame16_data)
+    if mass < 0:
+        print('No AME16 mass data for this nuclide, reverting to MB77')
+        mass = W_N_solve(A,Z,n_n)
+
+    return mass
+#end get_mass
 
 
 def W_L(Z,n_N,V_N):
@@ -78,9 +79,23 @@ def P_n(n_n):
     #   = n mu        - u
     k_n = (1.5 * np.pi*np.pi * n_n)**onethird
 
-    mu_n = W_bulk(k_n,0) + k_n / 3.0 * dWdk(k_n,0)
+    #mu_n = W_bulk(k_n,0) + k_n / 3.0 * dWdk(k_n,0)
+    # This expression for mu_n doesn't include the rest mass m_n,
+    # because it's taken from the W_bulk calculation. However, u_n
+    # DOES include the rest mass, so really du/dn for the pressure
+    # SHOULD include rest mass if u_n does as well.
 
-    return n_n * mu_n - u_n(n_n)
+    #return n_n * mu_n - u_n(n_n)
+
+    
+
+    # So really I can just write the pressure as:
+    # P = n du/dn - u
+    #   = n (mu + m_n n_n) - u
+    #   = n (mu + m_n n_n) - (W_bulk n_n + m_n n_n)
+    #   = n * (1/3 k_n dWdk)
+
+    return onethird * n_n * k_n * dWdk(k_n,0)
 #end P_n
 
 
@@ -89,7 +104,7 @@ def G_cell(P,A,Z,n_N,V_N,n_n):
     
     n_e = Z * n_N
     
-    return W_N_solve(A,Z,n_n) + W_L(Z,n_N,V_N) + \
+    return get_mass(Z,A,n_n) + W_L(Z,n_N,V_N) + \
            (u_e(n_e) + (1.0 - n_N*V_N)*u_n(n_n) + P)/n_N
 #end G_cell
 
@@ -131,21 +146,20 @@ def f_eq5_n_n(n_n_log10,P,A,Z,A_cell):
 
 def f_eq5(n_N_log10,P,A,Z,A_cell):
     n_N = 10.0**n_N_log10
-    print(n_N)
+    #print(n_N)
 
     n_e = Z * n_N
     
     k_n = 0.0
-    for i in range(5):
+    for i in range(3):
         V_N = give_V_N(A,Z,k_n)
         
         n_n = (A_cell - A)/(n_N**(-1.0) - V_N)
-        print(n_n)
         k_n = (1.5 * np.pi*np.pi * n_n)**onethird
 
     
 
-    print(P,P_e(n_e),P_L(Z,n_N,V_N),P_n(n_n))
+    #print(P,P_e(n_e),P_L(Z,n_N,V_N),P_n(n_n))
     return P - P_e(n_e) - P_L(Z,n_N,V_N) - P_n(n_n)
 #def f_eq5
 
@@ -173,16 +187,28 @@ def innercrust_solve_n_n(P,A,Z,A_cell):
 def innercrust_solve(P,A,Z,A_cell):
     # Calculates (n_N,V_N,n_n) for a given P, nucleus (Z,A), and A_cell
 
-    n_N_log10 = opt.brentq(f_eq5,-20.0,-4.0,args=(P,A,Z,A_cell))
-    n_N = 10.0**n_N_log10
-    print(n_N)
+    try:
+        n_N_log10 = opt.brentq(f_eq5,-20.0,-3.0,args=(P,A,Z,A_cell))
+        n_N = 10.0**n_N_log10
+        #print(n_N)
+            
+    ##    n_n = (A_cell - A)/(n_N**(-1.0) - V_N)
+    ##    k_n = (1.5 * np.pi*np.pi * n_n)**onethird
+    ##    
+    ##    V_N = give_V_N(A,Z,k_n)
+
+        k_n = 0.0
+        for i in range(3):
+            V_N = give_V_N(A,Z,k_n)
+            
+            n_n = (A_cell - A)/(n_N**(-1.0) - V_N)
+            #print(n_n)
+            k_n = (1.5 * np.pi*np.pi * n_n)**onethird
         
-    n_n = (A_cell - A)/(n_N**(-1.0) - V_N)
-    k_n = (1.5 * np.pi*np.pi * n_n)**onethird
-    
-    V_N = give_V_N(A,Z,k_n)
-    
-    return [n_N,V_N,n_n]
+        return [n_N,V_N,n_n]
+    except ValueError:
+        print('no n_N solution for ('+str(Z)+','+str(A)+')')
+        return [0.0,0.0,0.0]
 #end innercrust_solve
 
 
@@ -204,7 +230,7 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
             n_n = 0.0
 
             Gibbs = G_cell(P,A,Z,n_N,V_N,n_n) / A_cell
-            print(A,Z,Gibbs)
+            #print(A,Z,Gibbs)
             if (Gibbs < min_Gibbs):
                 min_Gibbs = Gibbs
                 min_ZA = [Z,A]
@@ -213,19 +239,19 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
 
 
     if neutron_drip == True:
-        for A in np.arange(40,np.ceil(A_cell),dtype=int):
-            for Z in np.arange(20,np.ceil(A/2),dtype=int):
+        for A in np.arange(10,np.ceil(A_cell)+1,dtype=int):
+            for Z in np.arange(10,np.ceil(A/2)+1,dtype=int):
                 A = float(A)
                 Z = float(Z)
                 A_cell = float(A_cell)
 
-                print(Z,A)
+                #print(Z,A)
                 [n_N,V_N,n_n] = innercrust_solve(P,A,Z,A_cell)
 
                 
                 if n_N > 0:
                     Gibbs = G_cell(P,A,Z,n_N,V_N,n_n) / A_cell
-                    print(A,Z,Gibbs)
+                    #print(A,Z,Gibbs)
                     if (Gibbs < min_Gibbs):
                         min_Gibbs = Gibbs
                         min_ZA = [Z,A]
@@ -235,7 +261,12 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
 
     # mass density in CGS units!
     rho_at_min = (n_N_at_min*1e39) * (W_N_solve(A,Z,n_n_at_min) * MeV_to_grams)
-    
+
+    # As a check, the number of free neutrons per nucleus should be
+    # close to ~ A_cell-A (give or take, due to the nuclear volume)
+    print('free neutrons per nucleus: '+str(n_n_at_min/n_N_at_min))
+    print('Y_n = '+str(n_n_at_min/(n_n_at_min + n_N_at_min*min_ZA[1])))
+
     return (min_ZA,rho_at_min)
 #end equilibrium_ZA
     

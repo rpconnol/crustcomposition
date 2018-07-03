@@ -9,6 +9,9 @@ from ..constants.constants_def import *
 
 '''
 
+Wpair_in_WN = True
+
+
 
 ## W_N ##
 def W_N(A,Z,k,k_n):
@@ -16,9 +19,13 @@ def W_N(A,Z,k,k_n):
     Z = float(Z)
 
     x = Z/A
-    
-    return ( (1.0-x)*m_n + x*m_p + W_bulk(k,x) ) * A + \
-           W_surf(A,x,k,k_n) + W_coul(A,x,k,k_n)
+
+    if Wpair_in_WN == True:
+        return ( (1.0-x)*m_n + x*m_p + W_bulk(k,x) ) * A + \
+               W_surf(A,x,k,k_n) + W_coul(A,x,k,k_n) + W_pair(A,Z)
+    else:
+        return ( (1.0-x)*m_n + x*m_p + W_bulk(k,x) ) * A + \
+               W_surf(A,x,k,k_n) + W_coul(A,x,k,k_n)
 ## end W_N ##
 
 
@@ -149,6 +156,9 @@ def dWdk(k,x):
 ## end dWdk ##
 
 
+def W_pair(A,Z):
+    return -0.5 * ( (-1.0)**int(A-Z) + (-1.0)**int(Z) ) * 11.0/A**onethird
+## end W_pair ##
 
 
 def mb77_2p9(k,A,x,k_n):
@@ -193,8 +203,8 @@ def give_me_BE(A,Z,k_n=0.0):
     
     mass = W_N_solve(A,Z)
 
-    W_pair = -0.5 * ( (-1.0)**int(A-Z) + (-1.0)**int(Z) ) * 11.0/A**onethird
-    mass = mass + W_pair
+    #W_pair = -0.5 * ( (-1.0)**int(A-Z) + (-1.0)**int(Z) ) * 11.0/A**onethird
+    #mass = mass + W_pair
 
     BE = Z*m_p + (A-Z)*m_n - mass
     BE_per_nuc = BE/A

@@ -12,8 +12,8 @@
 
 ### BBP71 TESTS ###
 
-import tests.bbp71_tests.test_bbp71
-tests.bbp71_tests.test_bbp71.run_tests()
+#import tests.bbp71_tests.test_bbp71
+#tests.bbp71_tests.test_bbp71.run_tests()
 
 
 
@@ -29,5 +29,5 @@ tests.bbp71_tests.test_bbp71.run_tests()
 
 ### HZ90 TESTS ###
 
-#import tests.hz90_tests.test_hz90
-#tests.hz90_tests.test_hz90.run_tests()
+import tests.hz90_tests.test_hz90
+tests.hz90_tests.test_hz90.run_tests()
