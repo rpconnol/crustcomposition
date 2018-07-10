@@ -2,6 +2,8 @@ from crustcomposition.hz90.hz90_lib import *
 
 def run_tests():
     test_which_mass()
+    test_VN()
+    test_pre_neutron_drip_singlepressure(1e20,56)
     test_pre_neutron_drip_singlepressure(1e29,56)
     test_neutron_drip_singlepressure(1e32,56)
 
@@ -14,6 +16,15 @@ def test_which_mass():
 
     print('\nZ,A = (26,80):')
     print(get_mass(26,80,0.0))
+
+
+
+def test_VN():
+    print('\nZ,A = (26,56):')
+    print(get_VN(56,26,0.0))
+
+    print('\nZ,A = (10,56):')
+    print(get_VN(56,10,0.0))
 
 
 

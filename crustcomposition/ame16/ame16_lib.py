@@ -1,35 +1,43 @@
 import numpy as np
 
 
-def load_mass16rc(file_path):
-    ame16_data = np.genfromtxt(file_path,
-                               names=['A','Z','mass'],
-                               #dtype=['int','int','float'],
-                               skip_header=1)
-    return ame16_data
-#
+class AME16_TABLE:
+    def __init__(self,user_file_path):
+        self.ame16_table = self.load_mass16rc(user_file_path)
+    #
+    
+    
+    def load_mass16rc(self,file_path):
+        ame16_data = np.genfromtxt(file_path,
+                                   names=['A','Z','mass'],
+                                   #dtype=['int','int','float'],
+                                   skip_header=1)
+        return ame16_data
+    #
 
 
-def mass_from_ZA(Z,A,ame16_data):
-    Zidx = np.where(ame16_data['Z'] == Z)
-    Aidx = np.where(ame16_data['A'] == A)
-    #print(Zidx)
-    #print(Aidx)
+    def get_mass(self,Z,A):
+        Zidx = np.where(self.ame16_table['Z'] == Z)
+        Aidx = np.where(self.ame16_table['A'] == A)
+        #print(Zidx)
+        #print(Aidx)
 
-    idx = [i for i in Zidx[0] if i in Aidx[0]]
-    #print(idx)
+        idx = [i for i in Zidx[0] if i in Aidx[0]]
+        #print(idx)
 
-    if idx == []:
-        return -1
-    else:
-        return(float(ame16_data['mass'][idx]))
-#
+        if idx == []:
+            return -1
+        else:
+            return(float(self.ame16_table['mass'][idx]))
+    #
+    
+## END CLASS ##
 
 
 
 
 if __name__ == '__main__':
-    ame16_data = load_mass16rc('mass16_rc.txt')
+    mass_table = AME16_TABLE('../../data/mass16_rc.txt')
 
-    print(mass_from_ZA(2,4,ame16_data))
-    print(mass_from_ZA(1,14,ame16_data))
+    print(mass_table.get_mass(2,4))
+    print(mass_table.get_mass(1,14))

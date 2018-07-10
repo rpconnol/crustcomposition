@@ -78,6 +78,8 @@ def W_surf(A,x,k,k_n=0.0):
     n_i  = k**3.0   / (1.5 * np.pi * np.pi)
     n_o  = k_n**3.0 / (1.5 * np.pi * np.pi)
     r_N  = (1.125 * np.pi)**onethird * A**onethird / k
+    #print(A,A*x)
+    #print(W_bulk(k_n,0),W_bulk(k,x))
     W_surf_0 = sigma * \
                (W_bulk(k_n,0) - W_bulk(k,x))**0.5 / w_0**0.5 * \
                (n_i - n_o)**2.0 / n_NM**2.0 * \
@@ -182,19 +184,23 @@ def W_N_solve(A,Z,n_n=0.0):
     A = float(A)
 
     k_n = (1.5 * np.pi*np.pi * n_n)**onethird
-    
-    k = k_solve(A,Z,k_n)
-    
-    if False:
-        print("solved k  : "+str(k))
-        print("n from k  : "+str(k**3.0 / (1.5 * np.pi * np.pi)))
-        print("sum of p+n: "+str(Z*m_p+(A-Z)*m_n))
-        print("W(k,x) * A: "+str(W_bulk(k,Z/A)*A))
-        print("W_surf    : "+str(W_surf(A,Z/A,k,k_n)))
-        print("W_coul    : "+str(W_coul(A,Z/A,k,k_n)))
-        #print("W_pair    : "+str(-0.5 * ( (-1.0)**int(A-Z) + (-1.0)**int(Z) ) * 11.0/A**onethird))
 
-    return W_N(A,Z,k,k_n)
+    try:
+        k = k_solve(A,Z,k_n)
+        
+        if False:
+            print("solved k  : "+str(k))
+            print("n from k  : "+str(k**3.0 / (1.5 * np.pi * np.pi)))
+            print("sum of p+n: "+str(Z*m_p+(A-Z)*m_n))
+            print("W(k,x) * A: "+str(W_bulk(k,Z/A)*A))
+            print("W_surf    : "+str(W_surf(A,Z/A,k,k_n)))
+            print("W_coul    : "+str(W_coul(A,Z/A,k,k_n)))
+            #print("W_pair    : "+str(-0.5 * ( (-1.0)**int(A-Z) + (-1.0)**int(Z) ) * 11.0/A**onethird))
+
+        return W_N(A,Z,k,k_n)
+    except ValueError:
+        return -1
+
 
 
 def give_me_BE(A,Z,k_n=0.0):
@@ -215,14 +221,33 @@ def give_me_BE(A,Z,k_n=0.0):
 def give_V_N(A,Z,k_n):
     Z = float(Z)
     A = float(A)
+
     k = k_solve(A,Z,k_n)
 
     # n = k^3 / (1.5 pi^2)
     # n = A/V_N -> V_N = A/n = 1.5 * pi^2 * A / k^3
 
     # returns V_N in fm^3
-    return 1.5 * np.pi * np.pi * A / k**3.0 
+    return 1.5 * np.pi * np.pi * A / k**3.0
 #end give_V_N
+
+    
+##def give_V_N(A,Z,k_n):
+##    Z = float(Z)
+##    A = float(A)
+##
+##    try:
+##        k = k_solve(A,Z,k_n)
+##
+##        # n = k^3 / (1.5 pi^2)
+##        # n = A/V_N -> V_N = A/n = 1.5 * pi^2 * A / k^3
+##
+##        # returns V_N in fm^3
+##        return 1.5 * np.pi * np.pi * A / k**3.0
+##    except ValueError:
+##        print('ValueError in give_V_N')
+##        return 0.0
+###end give_V_N
 
 
 

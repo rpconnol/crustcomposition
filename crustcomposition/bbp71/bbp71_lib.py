@@ -5,6 +5,17 @@ import sys
 from ..constants.constants_def import *
 #from bbp71_solvers import *
 
+# Need to overwrite the MB77 constants from constants module
+# with the correct BBP71 values
+k_0 = 1.43     # fm^-1
+w_0 = 16.5     # MeV
+s = 33.0       # MeV
+K = 143.0      # MeV
+sigma = 21.0   # MeV
+delta = 0.0    # NO DELTA in bbp71, set to 0 just in case
+
+
+
 '''
 W_N(A,Z,k,k_n)
 W_bulk(k,x)

@@ -11,20 +11,36 @@ from ..ame16.ame16_lib import *
 '''
 
 
+mass_table = AME16_TABLE('data/mass16_rc.txt')
+
+
+
 
 # Note: ALL units in MeV and fm for now. Densities are fm^-3, pressures are
 # MeV/fm^3, k's are fm^-1, etc.
 
 
 def get_mass(Z,A,n_n):
-    ame16_data = load_mass16rc('crustcomposition/ame16/mass16_rc.txt')
-    mass = mass_from_ZA(Z,A,ame16_data)
+    mass = mass_table.get_mass(Z,A)
     if mass < 0:
-        print('No AME16 mass data for this nuclide, reverting to MB77')
+        #print('No AME16 mass data for this nuclide, reverting to MB77')
         mass = W_N_solve(A,Z,n_n)
+        #if mass < 0:
+        #    print('-> No MB77 solution for this nuclide either!')
 
     return mass
 #end get_mass
+
+
+def get_VN(A,Z,k_n):
+    if mass_table.get_mass(Z,A) > 0:
+        #print('Nuclide exists in table, using fixed nuclear density')
+        n_0 = k_0**3.0 / (1.5 * np.pi * np.pi) # saturation density from MB77's k_0
+        return A/n_0
+    else:
+        #print('Nuclide not in table, calculating V_N from MB77')
+        return give_V_N(A,Z,k_n)
+#
 
 
 def W_L(Z,n_N,V_N):
@@ -103,9 +119,13 @@ def G_cell(P,A,Z,n_N,V_N,n_n):
     # Ensure pressure P is in MeV/fm^3
     
     n_e = Z * n_N
-    
-    return get_mass(Z,A,n_n) + W_L(Z,n_N,V_N) + \
-           (u_e(n_e) + (1.0 - n_N*V_N)*u_n(n_n) + P)/n_N
+
+    mass = get_mass(Z,A,n_n)
+    if mass > 0:
+        return mass + W_L(Z,n_N,V_N) + \
+               (u_e(n_e) + (1.0 - n_N*V_N)*u_n(n_n) + P)/n_N
+    else:
+        return 1e99
 #end G_cell
 
 
@@ -127,21 +147,21 @@ def outercrust_solve(P,A,Z):
 #end outercrust_solve
 
 
-def f_eq5_n_n(n_n_log10,P,A,Z,A_cell):
-    n_n = 10.0**n_n_log10
-    print(n_n)
-    
-    k_n = (1.5 * np.pi*np.pi * n_n)**onethird
-    V_N = give_V_N(A,Z,k_n)
-
-    n_N = ((A_cell - A)/n_n + V_N)**(-1.0)
-    print(n_N)
-
-    n_e = Z * n_N
-
-    print(P,P_e(n_e),P_L(Z,n_N,V_N),P_n(n_n))
-    return P - P_e(n_e) - P_L(Z,n_N,V_N) - P_n(n_n)
-#def f_eq5
+##def f_eq5_n_n(n_n_log10,P,A,Z,A_cell):  # DEPRECATED
+##    n_n = 10.0**n_n_log10
+##    print(n_n)
+##    
+##    k_n = (1.5 * np.pi*np.pi * n_n)**onethird
+##    V_N = give_V_N(A,Z,k_n)
+##
+##    n_N = ((A_cell - A)/n_n + V_N)**(-1.0)
+##    print(n_N)
+##
+##    n_e = Z * n_N
+##
+##    print(P,P_e(n_e),P_L(Z,n_N,V_N),P_n(n_n))
+##    return P - P_e(n_e) - P_L(Z,n_N,V_N) - P_n(n_n)
+###def f_eq5_n_n
 
 
 def f_eq5(n_N_log10,P,A,Z,A_cell):
@@ -152,11 +172,11 @@ def f_eq5(n_N_log10,P,A,Z,A_cell):
     
     k_n = 0.0
     for i in range(3):
-        V_N = give_V_N(A,Z,k_n)
+        V_N = get_VN(A,Z,k_n)
         
         n_n = (A_cell - A)/(n_N**(-1.0) - V_N)
         k_n = (1.5 * np.pi*np.pi * n_n)**onethird
-
+#
     
 
     #print(P,P_e(n_e),P_L(Z,n_N,V_N),P_n(n_n))
@@ -164,24 +184,24 @@ def f_eq5(n_N_log10,P,A,Z,A_cell):
 #def f_eq5
 
 
-def innercrust_solve_n_n(P,A,Z,A_cell):
-    # Calculates (n_N,V_N,n_n) for a given P, nucleus (Z,A), and A_cell
-
-    try:
-        n_n_log10 = opt.brentq(f_eq5,-10.0,-1.0,args=(P,A,Z,A_cell))
-        n_n = 10.0**n_n_log10
-        print(n_n)
-
-        k_n = (1.5 * np.pi*np.pi * n_n)**onethird
-        V_N = give_V_N(A,Z,k_n)
-
-        n_N = ((A_cell - A)/n_n + V_N)**(-1.0)
-        
-        return [n_N,V_N,n_n]
-    except ValueError:
-        print('no n_n solution for ('+str(Z)+','+str(A)+')')
-        return [0.0,0.0,0.0]
-#end innercrust_solve
+##def innercrust_solve_n_n(P,A,Z,A_cell):   # DEPRECATED
+##    # Calculates (n_N,V_N,n_n) for a given P, nucleus (Z,A), and A_cell
+##
+##    try:
+##        n_n_log10 = opt.brentq(f_eq5,-10.0,-1.0,args=(P,A,Z,A_cell))
+##        n_n = 10.0**n_n_log10
+##        print(n_n)
+##
+##        k_n = (1.5 * np.pi*np.pi * n_n)**onethird
+##        V_N = give_V_N(A,Z,k_n)
+##
+##        n_N = ((A_cell - A)/n_n + V_N)**(-1.0)
+##        
+##        return [n_N,V_N,n_n]
+##    except ValueError:
+##        print('no n_n solution for ('+str(Z)+','+str(A)+')')
+##        return [0.0,0.0,0.0]
+###end innercrust_solve
 
 
 def innercrust_solve(P,A,Z,A_cell):
@@ -199,7 +219,7 @@ def innercrust_solve(P,A,Z,A_cell):
 
         k_n = 0.0
         for i in range(3):
-            V_N = give_V_N(A,Z,k_n)
+            V_N = get_VN(A,Z,k_n)
             
             n_n = (A_cell - A)/(n_N**(-1.0) - V_N)
             #print(n_n)
@@ -207,7 +227,7 @@ def innercrust_solve(P,A,Z,A_cell):
         
         return [n_N,V_N,n_n]
     except ValueError:
-        print('no n_N solution for ('+str(Z)+','+str(A)+')')
+        #print('no n_N solution for ('+str(Z)+','+str(A)+')')
         return [0.0,0.0,0.0]
 #end innercrust_solve
 
@@ -220,11 +240,11 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
         
     if neutron_drip == False:
         A = A_cell
-        for Z in np.arange(10,np.ceil(A_cell/2)+1,dtype=int): # Test
+        for Z in np.arange(1,np.ceil(A_cell/2)+1,dtype=int): # Test
             A = float(A)
             Z = float(Z)
             A_cell = float(A_cell)
-            
+
             n_N = outercrust_solve(P,A,Z)
             V_N = 0.0
             n_n = 0.0
@@ -239,14 +259,15 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
 
 
     if neutron_drip == True:
-        for A in np.arange(10,np.ceil(A_cell)+1,dtype=int):
-            for Z in np.arange(10,np.ceil(A/2)+1,dtype=int):
+        for A in np.arange(1,np.ceil(A_cell)+1,dtype=int):
+            for Z in np.arange(1,np.ceil(A/2)+1,dtype=int):
                 A = float(A)
                 Z = float(Z)
                 A_cell = float(A_cell)
 
                 #print(Z,A)
                 [n_N,V_N,n_n] = innercrust_solve(P,A,Z,A_cell)
+                #print(n_N,V_N,n_n)
 
                 
                 if n_N > 0:
@@ -260,7 +281,8 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
             
 
     # mass density in CGS units!
-    rho_at_min = (n_N_at_min*1e39) * (W_N_solve(A,Z,n_n_at_min) * MeV_to_grams)
+    rho_at_min = (n_N_at_min*1e39) * \
+                 (get_mass(min_ZA[0],min_ZA[1],n_n_at_min) * MeV_to_grams)
 
     # As a check, the number of free neutrons per nucleus should be
     # close to ~ A_cell-A (give or take, due to the nuclear volume)
