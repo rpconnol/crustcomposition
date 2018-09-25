@@ -49,10 +49,6 @@ def W_bulk(k,x):
                  c_sjoberg[5] * k**2.0 + \
                  c_sjoberg[6] * k**3.0 + \
                  c_sjoberg[7] * k**4.0
-        d_Wxequalszero_dk = c_sjoberg[0]                + \
-                            2.0 * c_sjoberg[1] * k      + \
-                            3.0 * c_sjoberg[2] * k**2.0 + \
-                            4.0 * c_sjoberg[3] * k**3.0
         mu_n_0 = W_xequalszero + k / 3.0 * dWdk(k,0) #d_Wxequalszero_dk
         alpha = 1.0 - 2.0*x
 
@@ -167,11 +163,21 @@ def mb77_2p9(k,A,x,k_n):
     return k * dWdk(k,x) - (2.0 * W_surf(A,x,k,k_n) - W_coul(A,x,k,k_n))/A
 
 
+def mb77_2p9_neutrons(k,A,x,k_n):
+    # not implemented yet
+    return -1
+
 
 def k_solve(A,Z,k_n):
     x = Z/A
+
+    # k_n+0.01 in the lower bound ensures that k > k_n always (k <= k_n
+    # busts some denominators). The max(1.2,  ) part is just cheating
+    # because we know k is always going to be somewhere near 1.3ish
+    # (could remove that long-term???)
     
     k = opt.brentq(mb77_2p9,max(1.2,k_n+0.01),1.4,args=(A,x,k_n))
+    
     #print(k)
     
     return k
@@ -195,7 +201,7 @@ def W_N_solve(A,Z,n_n=0.0):
             print("W(k,x) * A: "+str(W_bulk(k,Z/A)*A))
             print("W_surf    : "+str(W_surf(A,Z/A,k,k_n)))
             print("W_coul    : "+str(W_coul(A,Z/A,k,k_n)))
-            #print("W_pair    : "+str(-0.5 * ( (-1.0)**int(A-Z) + (-1.0)**int(Z) ) * 11.0/A**onethird))
+            print("W_pair    : "+str(W_pair(A,Z))
 
         return W_N(A,Z,k,k_n)
     except ValueError:
@@ -208,9 +214,6 @@ def give_me_BE(A,Z,k_n=0.0):
     A = float(A)
     
     mass = W_N_solve(A,Z)
-
-    #W_pair = -0.5 * ( (-1.0)**int(A-Z) + (-1.0)**int(Z) ) * 11.0/A**onethird
-    #mass = mass + W_pair
 
     BE = Z*m_p + (A-Z)*m_n - mass
     BE_per_nuc = BE/A

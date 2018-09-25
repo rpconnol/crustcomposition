@@ -236,7 +236,7 @@ def innercrust_solve(P,A,Z,A_cell):
 def equilibrium_ZA(P,A_cell,neutron_drip=False):
     Gibbs = 1e99
     min_Gibbs = 1e99
-    min_ZA = [0,0]
+    [Z_sol,A_sol] = [0,0]
         
     if neutron_drip == False:
         A = A_cell
@@ -253,9 +253,9 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
             #print(A,Z,Gibbs)
             if (Gibbs < min_Gibbs):
                 min_Gibbs = Gibbs
-                min_ZA = [Z,A]
-                n_N_at_min = n_N
-                n_n_at_min = n_n
+                [Z_sol,A_sol] = [Z,A]
+                n_N_sol = n_N
+                n_n_sol = n_n
 
 
     if neutron_drip == True:
@@ -275,27 +275,79 @@ def equilibrium_ZA(P,A_cell,neutron_drip=False):
                     #print(A,Z,Gibbs)
                     if (Gibbs < min_Gibbs):
                         min_Gibbs = Gibbs
-                        min_ZA = [Z,A]
-                        n_N_at_min = n_N
-                        n_n_at_min = n_n
+                        [Z_sol,A_sol] = [Z,A]
+                        n_N_sol = n_N
+                        n_n_sol = n_n
             
 
     # mass density in CGS units!
-    rho_at_min = (n_N_at_min*1e39) * \
-                 (get_mass(min_ZA[0],min_ZA[1],n_n_at_min) * MeV_to_grams)
+    rho_sol = (n_N_sol*1e39) * \
+                 (get_mass(Z_sol,A_sol,n_n_sol) * MeV_to_grams)
+
+    # Y_n at solution
+    Yn_sol = n_n_sol/(n_n_sol + n_N_sol*A_sol)
 
     # As a check, the number of free neutrons per nucleus should be
     # close to ~ A_cell-A (give or take, due to the nuclear volume)
-    print('free neutrons per nucleus: '+str(n_n_at_min/n_N_at_min))
-    print('Y_n = '+str(n_n_at_min/(n_n_at_min + n_N_at_min*min_ZA[1])))
+    #print('free neutrons per nucleus: '+str(n_n_sol/n_N_sol))
+    #print('Y_n = '+str(Yn_sol))
 
-    return (min_ZA,rho_at_min)
+    return (Z_sol,A_sol,rho_sol,Yn_sol)
 #end equilibrium_ZA
     
 
 
+# the biggest one! Loop over the whole crust
+def solve_crust(init_P,init_Acell,
+                init_neutrondrip=False,P_stop=0.06,P_units='nuc'):
+
+    # Start file
+    with open("output/out.txt", "w") as myfile:
+        myfile.write("Initial A_cell = {:0.0f}\n".format(init_Acell))
+        myfile.write("{:>15}{:>12}{:>5}{:>5}{:>7}\n".format(
+            "P [MeV fm^-3]","rho [g/cc]","Z","A","Y_n"))
 
 
+
+    #initializing some things
+    if P_units == 'nuc':
+        P = init_P
+    if P_units == 'cgs':
+        P = init_P * erg_to_MeV / 1e39
+        if P_stop > 1:  # nuclear P_stop should be something in 0.1-0.01 range
+            P_stop = P_stop * erg_to_MeV / 1e39
+    
+    A_cell = float(init_Acell)
+
+    neutron_drip = init_neutrondrip
+    
+
+
+    #Start looping over many pressures
+    while P < P_stop:
+        print('Attempting P = {:5.2E}'.format(P))
+        (Z,A,rho,Y_n) = equilibrium_ZA(P,A_cell,neutron_drip)
+
+        # Append to file
+        with open("output/out.txt", "a") as myfile:
+            myfile.write("{:15.2E}{:12.2E}{:5.0f}{:5.0f}{:7.2f}\n".format(
+                P,rho,Z,A,Y_n))
+        print('   Success, appended to file')
+
+
+        if neutron_drip == False:
+            # NEED A BETTER CONDITIONAL FOR TURNING ON DRIP MODE
+            if rho > 6e11:
+                neutron_drip = True
+                print("Switching to neutron drip regime")
 
         
+        P = 1.1 * P  # Maybe make this factor manually adjustable,
+                     # or let user pick number of steps per decade or something
+    #end while
+    print('Stopping... At pressure limit')
+
+
+    
+#end solve_crust
 
